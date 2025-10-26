@@ -2,6 +2,87 @@
 
 A React + TypeScript + Tailwind CSS application that demonstrates a voice-first approach to grant writing for Community Economic Development Officers (CEDOs) in Canada's northern indigenous communities.
 
+## 🚀 Setup & Configuration
+
+### API Configuration (Required for Voice Features)
+
+This application uses ElevenLabs Speech-to-Text and Text-to-Speech APIs. To enable voice features:
+
+1. **Get ElevenLabs API Key**
+   - Sign up at [ElevenLabs](https://elevenlabs.io/)
+   - Get your API key from your account dashboard
+
+2. **Create `.env` file**
+   ```bash
+   # Copy the example file
+   cp .env.example .env
+   
+   # Edit .env and add your credentials
+   VITE_EVENTLABS_API_KEY=your_elevenlabs_api_key_here
+   VITE_EVENTLABS_ENDPOINT=https://api.elevenlabs.io
+   ```
+
+3. **Verify Configuration**
+   - Open browser console (F12)
+   - Look for: `🔧 EventLabs Service initialized`
+   - Check: `🔧 API Key exists: true`
+   - Check: `🔧 Endpoint: https://api.elevenlabs.io`
+
+### 🔍 Debugging Speech-to-Text
+
+If STT is not working, check the browser console for these logs:
+
+**✅ Good signs:**
+```
+🔧 EventLabs Service initialized
+🔧 API Key exists: true
+🔧 Endpoint: https://api.elevenlabs.io
+🎤 Recording started
+🔍 Starting STT conversion...
+🔍 Audio blob size: [number] bytes
+✅ STT Response: {...}
+📝 Transcription: [your text]
+```
+
+**❌ Common issues:**
+
+1. **Missing API Key**
+   ```
+   ⚠️ Missing environment variables
+   ```
+   - Solution: Create `.env` file with your API key
+
+2. **Wrong endpoint format**
+   ```
+   ❌ STT Error Response: 404 Not Found
+   ```
+   - Solution: Ensure endpoint is `https://api.elevenlabs.io` (no trailing slash)
+
+3. **Empty transcript**
+   ```
+   ❌ Error: Empty transcript received from API
+   ```
+   - Solution: Check audio quality, ensure microphone permissions granted
+
+4. **CORS or network errors**
+   ```
+   ❌ Error in speech-to-text: [network error]
+   ```
+   - Solution: Check internet connection, API key validity
+
+### Browser Console Commands
+
+To manually test:
+```javascript
+// Check service initialization
+console.log(eventLabsService);
+
+// Test microphone access
+navigator.mediaDevices.getUserMedia({ audio: true })
+  .then(() => console.log('✅ Microphone access granted'))
+  .catch(err => console.error('❌ Microphone blocked:', err));
+```
+
 ## Features
 
 - **Voice-First Interface**: Start conversations naturally with voice input

@@ -4,6 +4,7 @@ import { VoiceChat } from './VoiceChat';
 import { Message, Section, Document } from './types';
 import { ArrowLeft, Download } from 'lucide-react';
 import { eventLabsService } from './services/eventlabs';
+import { openAIService } from './services/openai';
 
 interface AssistantPageProps {
   onBack: () => void;
@@ -216,18 +217,58 @@ export function AssistantPage({ onBack, onReview }: AssistantPageProps) {
     setIsListening(true);
     
     try {
-      // Start recording with EventLabs
-      await eventLabsService.startRecording();
-      console.log('🎤 Recording started via EventLabs');
-    } catch (error) {
-      console.error('Failed to start recording:', error);
+      // Start speech recognition IMMEDIATELY when button is pressed
+      console.log('🎤 Starting speech recognition...');
+      const transcript = await eventLabsService.speechToText();
+      
+      // If we get a transcript, process it
+      if (transcript && transcript.trim().length > 0) {
+        setIsListening(false);
+        
+        // Display user message
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          role: 'user',
+          content: transcript,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, userMessage]);
+
+        // 2. GPT-4o: Generate AI response
+        console.log('💬 Step 2: Generating AI response...');
+        const aiResponse = await openAIService.chat(transcript);
+
+        // 3. TTS: Convert AI response to speech
+        console.log('🔊 Step 3: Converting AI response to speech...');
+        const audioUrl = await eventLabsService.textToSpeech(aiResponse);
+
+        // Display AI message with audio
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: aiResponse,
+          timestamp: new Date(),
+          audioUrl: audioUrl,
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+
+        // 4. Auto-play AI voice response
+        console.log('▶️ Step 4: Playing AI voice response...');
+        await eventLabsService.playAudio(audioUrl);
+
+        console.log('✅ Complete voice conversation cycle finished');
+      } else {
+        // No transcript received, but speech recognition started
+        console.log('⏱️ Waiting for speech...');
+      }
+    } catch (error: any) {
+      console.error('❌ Speech recognition error:', error);
       setIsListening(false);
       
-      // Show error message to user
       const errorMessage: Message = {
         id: Date.now().toString(),
         role: 'system',
-        content: '⚠️ Could not access microphone. Please check permissions or use text input.',
+        content: error.message || '⚠️ Could not process voice conversation. Please try again.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -235,33 +276,10 @@ export function AssistantPage({ onBack, onReview }: AssistantPageProps) {
   };
 
   const handleStopListening = async () => {
-    try {
-      // Stop recording and get audio
-      const audioBlob = await eventLabsService.stopRecording();
-      
-      // Transcribe audio to text
-      const transcript = await eventLabsService.speechToText(audioBlob);
-      
-      if (transcript) {
-        // Send transcribed text as user message
-        handleSendMessage(transcript);
-      } else {
-        throw new Error('No transcript received');
-      }
-    } catch (error) {
-      console.error('Failed to process recording:', error);
-      
-      // Show error message
-      const errorMessage: Message = {
-        id: Date.now().toString(),
-        role: 'system',
-        content: '⚠️ Could not process voice input. Please try again or use text input.',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsListening(false);
-    }
+    // Just stop the listening state
+    // The speech recognition will handle stopping automatically
+    console.log('🛑 Stop button clicked');
+    setIsListening(false);
   };
 
   const handleSendMessage = (text: string) => {
